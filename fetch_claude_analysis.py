@@ -76,13 +76,17 @@ def main():
             f"The SMA20 is at {ctx['sma20']:.2f} and the SMA50 is at {ctx['sma50']:.2f}. "
             f"{cross_info}"
             "The SMA20 and SMA50 on the S&P recently crossed — when do you forecast they will "
-            "cross again? Please provide a concise analysis with your forecast."
+            "cross again? Please provide a concise analysis with your forecast. "
+            "In the 'Current Situation' heading, write it as: '## Current Situation (as of {AS_OF_DATE})' "
+            "— use the literal text {AS_OF_DATE} as a placeholder, do not replace it with an actual date."
         )
     else:
         prompt = (
             "The SMA20 and SMA50 on the S&P 500 recently crossed. "
             "When do you forecast they will cross again? "
-            "Please provide a concise analysis with your forecast."
+            "Please provide a concise analysis with your forecast. "
+            "In the 'Current Situation' heading, write it as: '## Current Situation (as of {AS_OF_DATE})' "
+            "— use the literal text {AS_OF_DATE} as a placeholder, do not replace it with an actual date."
         )
 
     client = anthropic.Anthropic(api_key=os.environ['ANTHROPIC_API_KEY'])

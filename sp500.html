@@ -611,7 +611,11 @@ async function loadClaudeAnalysis() {
         const answerEl    = document.getElementById('claude-answer');
         const timestampEl = document.getElementById('claude-timestamp');
 
-        answerEl.innerHTML = `<div class="claude-answer">${data.analysis.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+        const today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        const analysisText = data.analysis
+            .replace(/\{AS_OF_DATE\}/g, today)
+            .replace(/\(as of[^)\n]+\)/gi, `(as of ${today})`);
+        answerEl.innerHTML = `<div class="claude-answer">${analysisText.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
 
         if (data.generated_at) {
             const d = new Date(data.generated_at);
