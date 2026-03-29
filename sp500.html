@@ -156,6 +156,64 @@
         }
         .stat-item .stat-value { font-size: 13px; font-weight: 600; margin-top: 1px; }
 
+        /* ── Claude analysis card ── */
+        .claude-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-top: 14px;
+        }
+        .claude-card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .claude-card-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+        }
+        .claude-badge {
+            font-size: 10px;
+            color: var(--purple);
+            background: rgba(139,92,246,0.12);
+            border: 1px solid rgba(139,92,246,0.3);
+            padding: 1px 7px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .claude-timestamp {
+            margin-left: auto;
+            font-size: 10px;
+            color: var(--muted);
+        }
+        .claude-question {
+            font-size: 12px;
+            color: var(--sub);
+            font-style: italic;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+        .claude-answer {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.65;
+            white-space: pre-wrap;
+        }
+        .claude-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--muted);
+            padding: 8px 0;
+        }
+
         /* ── Loading spinner ── */
         #loading {
             position: fixed; inset: 0;
@@ -266,6 +324,23 @@
     </div>
 
     <div class="stats-bar" id="stats-bar"></div>
+
+    <!-- Claude AI Analysis -->
+    <div class="claude-card">
+        <div class="claude-card-header">
+            <span class="claude-card-title">AI Analysis</span>
+            <span class="claude-badge">Claude Opus 4.6</span>
+            <span class="claude-timestamp" id="claude-timestamp"></span>
+        </div>
+        <div class="claude-question">
+            "The SMA20 and SMA50 on the S&amp;P recently crossed — when do you forecast they will cross again?"
+        </div>
+        <div id="claude-answer">
+            <div class="claude-loading">
+                <div class="spinner"></div>Loading AI analysis…
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -519,9 +594,32 @@ function scheduleRefresh() {
     refreshTimer = setInterval(() => loadData(currentRange), 5 * 60 * 1000);
 }
 
+// ── Claude analysis ───────────────────────────────────────────────────────
+async function loadClaudeAnalysis() {
+    try {
+        const res = await fetch('data/claude_sma_analysis.json');
+        if (!res.ok) throw new Error('not found');
+        const data = await res.json();
+
+        const answerEl    = document.getElementById('claude-answer');
+        const timestampEl = document.getElementById('claude-timestamp');
+
+        answerEl.innerHTML = `<div class="claude-answer">${data.analysis.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+
+        if (data.generated_at) {
+            const d = new Date(data.generated_at);
+            timestampEl.textContent = `Updated ${d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })} ${d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+    } catch {
+        document.getElementById('claude-answer').innerHTML =
+            '<div style="font-size:12px;color:var(--muted)">Analysis unavailable — run the GitHub Actions workflow to generate it.</div>';
+    }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────
 loadData(currentRange);
 scheduleRefresh();
+loadClaudeAnalysis();
 </script>
 </body>
 </html>

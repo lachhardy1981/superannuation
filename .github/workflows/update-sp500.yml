@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install yfinance pandas numpy
+        run: pip install yfinance pandas numpy anthropic
 
       - name: Fetch S&P 500 data (all ranges)
         run: |
@@ -31,6 +31,11 @@ jobs:
           python3 fetch_sp500.py 1y  1d  > data/sp500_1y_1d.json
           python3 fetch_sp500.py 2y  1d  > data/sp500_2y_1d.json
           python3 fetch_sp500.py 5y  1wk > data/sp500_5y_1wk.json
+
+      - name: Generate Claude SMA analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 fetch_claude_analysis.py > data/claude_sma_analysis.json
 
       - name: Commit updated data
         run: |

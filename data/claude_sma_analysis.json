@@ -1,0 +1,6 @@
+{
+  "analysis": "Analysis will be generated on the next GitHub Actions workflow run. Add your ANTHROPIC_API_KEY secret to the repository settings to enable this feature.",
+  "context": null,
+  "generated_at": null,
+  "model": "claude-opus-4-6"
+}
