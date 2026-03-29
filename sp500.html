@@ -36,9 +36,15 @@
             align-items: baseline;
             gap: 10px;
             flex-wrap: wrap;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
-        .header h1 { font-size: 20px; font-weight: 700; }
+        .header h1 { font-size: 22px; font-weight: 700; }
+        .header-subtitle {
+            font-size: 14px;
+            color: var(--sub);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
         .ticker {
             font-size: 12px; color: var(--muted);
             background: rgba(255,255,255,0.06);
@@ -192,7 +198,7 @@
             color: var(--muted);
         }
         .claude-question {
-            font-size: 12px;
+            font-size: 14px;
             color: var(--sub);
             font-style: italic;
             margin-bottom: 10px;
@@ -200,9 +206,9 @@
             border-bottom: 1px solid var(--border);
         }
         .claude-answer {
-            font-size: 13px;
+            font-size: 15px;
             color: var(--text);
-            line-height: 1.65;
+            line-height: 1.75;
             white-space: pre-wrap;
         }
         .claude-loading {
@@ -245,10 +251,28 @@
 
     <!-- Header -->
     <div class="header">
-        <h1>S&amp;P 500 Technical Analysis</h1>
+        <h1>Super in Shares or Cash</h1>
         <span class="ticker">^GSPC</span>
         <span class="delayed-badge">⏱ 15-min delayed</span>
         <a href="/" class="back-link">← Super Dashboard</a>
+    </div>
+    <p class="header-subtitle">SMA20 above the SMA50 = Invested in Shares. &nbsp;SMA20 below the SMA50 = sit in Cash</p>
+
+    <!-- Claude AI Analysis -->
+    <div class="claude-card">
+        <div class="claude-card-header">
+            <span class="claude-card-title">AI Analysis</span>
+            <span class="claude-badge">Claude Opus 4.6</span>
+            <span class="claude-timestamp" id="claude-timestamp"></span>
+        </div>
+        <div class="claude-question">
+            "The SMA20 and SMA50 on the S&amp;P recently crossed — when do you forecast they will cross again?"
+        </div>
+        <div id="claude-answer">
+            <div class="claude-loading">
+                <div class="spinner"></div>Loading AI analysis…
+            </div>
+        </div>
     </div>
 
     <div class="price-row">
@@ -278,23 +302,6 @@
             <button class="ind-btn"        data-series="sma100" style="border-color:rgba(139,92,246,0.5)">SMA 100</button>
             <button class="ind-btn"        data-series="sma200" style="border-color:rgba(236,72,153,0.5)">SMA 200</button>
             <button class="ind-btn"        data-series="bb"     style="border-color:rgba(6,182,212,0.5)">BB (20,2)</button>
-        </div>
-    </div>
-
-    <!-- Claude AI Analysis -->
-    <div class="claude-card">
-        <div class="claude-card-header">
-            <span class="claude-card-title">AI Analysis</span>
-            <span class="claude-badge">Claude Sonnet 4.6</span>
-            <span class="claude-timestamp" id="claude-timestamp"></span>
-        </div>
-        <div class="claude-question">
-            "The SMA20 and SMA50 on the S&amp;P recently crossed — when do you forecast they will cross again?"
-        </div>
-        <div id="claude-answer">
-            <div class="claude-loading">
-                <div class="spinner"></div>Loading AI analysis…
-            </div>
         </div>
     </div>
 
