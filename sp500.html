@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S&P 500 — Technical Analysis</title>
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        :root {
+            --bg:       #0a0e17;
+            --card:     #111827;
+            --border:   #1e293b;
+            --text:     #e2e8f0;
+            --muted:    #64748b;
+            --sub:      #94a3b8;
+            --green:    #10b981;
+            --red:      #ef4444;
+            --blue:     #3b82f6;
+            --orange:   #f59e0b;
+            --purple:   #8b5cf6;
+            --pink:     #ec4899;
+            --cyan:     #06b6d4;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* ── Header ── */
+        .header {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .header h1 { font-size: 20px; font-weight: 700; }
+        .ticker {
+            font-size: 12px; color: var(--muted);
+            background: rgba(255,255,255,0.06);
+            padding: 2px 8px; border-radius: 4px;
+            font-family: monospace;
+        }
+        .delayed-badge {
+            font-size: 11px; color: var(--orange);
+            background: rgba(245,158,11,0.1);
+            border: 1px solid rgba(245,158,11,0.3);
+            padding: 2px 8px; border-radius: 4px;
+        }
+        .back-link {
+            margin-left: auto;
+            font-size: 12px; color: var(--sub);
+            text-decoration: none;
+        }
+        .back-link:hover { color: var(--text); }
+
+        /* ── Price row ── */
+        .price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        #price { font-size: 30px; font-weight: 700; letter-spacing: -0.5px; }
+        #change { font-size: 15px; font-weight: 600; }
+        #last-updated { font-size: 11px; color: var(--muted); }
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+
+        /* ── Error ── */
+        #error-msg {
+            display: none;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: var(--red);
+            margin-bottom: 12px;
+        }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        .btn-group { display: flex; gap: 3px; }
+        .sep { width: 1px; height: 22px; background: var(--border); }
+
+        button {
+            padding: 5px 11px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--sub);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.12s;
+            font-family: inherit;
+        }
+        button:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+        .range-btn.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+        .ind-btn.active { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.4); color: var(--blue); }
+
+        /* ── Chart wrappers ── */
+        .chart-wrap {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .chart-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 12px 3px;
+            font-size: 10px;
+            color: var(--muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .legend { display: flex; gap: 10px; }
+        .ld { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--sub); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+        #price-chart  { height: 400px; }
+        #volume-chart { height: 80px; }
+        #rsi-chart    { height: 120px; }
+        #macd-chart   { height: 130px; }
+
+        /* ── Stats bar ── */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 12px 0 4px;
+            border-top: 1px solid var(--border);
+            margin-top: 6px;
+        }
+        .stat-item .stat-label {
+            font-size: 10px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        .stat-item .stat-value { font-size: 13px; font-weight: 600; margin-top: 1px; }
+
+        /* ── Loading spinner ── */
+        #loading {
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(10,14,23,0.7);
+            z-index: 50;
+            font-size: 13px; color: var(--sub); gap: 8px;
+        }
+        #loading.hidden { display: none; }
+        .spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-top-color: var(--blue);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 600px) {
+            #price { font-size: 24px; }
+            #price-chart { height: 300px; }
+        }
+    </style>
+</head>
+<body>
+<div id="loading"><div class="spinner"></div>Loading S&amp;P 500 data…</div>
+
+<div class="container">
+
+    <!-- Header -->
+    <div class="header">
+        <h1>S&amp;P 500 Technical Analysis</h1>
+        <span class="ticker">^GSPC</span>
+        <span class="delayed-badge">⏱ 15-min delayed</span>
+        <a href="/" class="back-link">← Super Dashboard</a>
+    </div>
+
+    <div class="price-row">
+        <span id="price">—</span>
+        <span id="change">—</span>
+        <span id="last-updated"></span>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <!-- Range -->
+        <div class="btn-group" id="range-buttons">
+            <button class="range-btn" data-range="1mo">1M</button>
+            <button class="range-btn" data-range="3mo">3M</button>
+            <button class="range-btn" data-range="6mo">6M</button>
+            <button class="range-btn active" data-range="1y">1Y</button>
+            <button class="range-btn" data-range="2y">2Y</button>
+            <button class="range-btn" data-range="5y">5Y</button>
+        </div>
+        <div class="sep"></div>
+        <!-- Indicators -->
+        <div class="btn-group">
+            <button class="ind-btn active" data-series="sma20"  style="border-color:rgba(16,185,129,0.5)">SMA 20</button>
+            <button class="ind-btn active" data-series="sma50"  style="border-color:rgba(245,158,11,0.5)">SMA 50</button>
+            <button class="ind-btn"        data-series="sma100" style="border-color:rgba(139,92,246,0.5)">SMA 100</button>
+            <button class="ind-btn"        data-series="sma200" style="border-color:rgba(236,72,153,0.5)">SMA 200</button>
+            <button class="ind-btn"        data-series="bb"     style="border-color:rgba(6,182,212,0.5)">BB (20,2)</button>
+        </div>
+    </div>
+
+    <!-- Price chart -->
+    <div class="chart-wrap">
+        <div class="chart-label">
+            <span>Price (USD)</span>
+            <div class="legend">
+                <div class="ld"><div class="dot" style="background:var(--green)"></div>SMA 20</div>
+                <div class="ld"><div class="dot" style="background:var(--orange)"></div>SMA 50</div>
+                <div class="ld"><div class="dot" style="background:var(--purple)"></div>SMA 100</div>
+                <div class="ld"><div class="dot" style="background:var(--pink)"></div>SMA 200</div>
+                <div class="ld"><div class="dot" style="background:var(--cyan)"></div>BB</div>
+            </div>
+        </div>
+        <div id="price-chart"></div>
+    </div>
+
+    <!-- Volume chart -->
+    <div class="chart-wrap">
+        <div class="chart-label"><span>Volume</span></div>
+        <div id="volume-chart"></div>
+    </div>
+
+    <!-- RSI chart -->
+    <div class="chart-wrap">
+        <div class="chart-label">
+            <span>RSI (14)</span>
+            <span style="color:var(--sub)">Overbought &gt; 70 · Oversold &lt; 30</span>
+        </div>
+        <div id="rsi-chart"></div>
+    </div>
+
+    <!-- MACD chart -->
+    <div class="chart-wrap">
+        <div class="chart-label">
+            <span>MACD (12, 26, 9)</span>
+            <div class="legend">
+                <div class="ld"><div class="dot" style="background:var(--blue)"></div>MACD</div>
+                <div class="ld"><div class="dot" style="background:var(--orange)"></div>Signal</div>
+            </div>
+        </div>
+        <div id="macd-chart"></div>
+    </div>
+
+    <div class="stats-bar" id="stats-bar"></div>
+</div>
+
+<script>
+// ── Chart creation helpers ────────────────────────────────────────────────
+const COMMON_OPTS = {
+    layout: {
+        background: { type: 'solid', color: '#111827' },
+        textColor: '#94a3b8',
+        fontSize: 11,
+    },
+    grid: {
+        vertLines: { color: 'rgba(255,255,255,0.04)' },
+        horzLines: { color: 'rgba(255,255,255,0.04)' },
+    },
+    crosshair:       { mode: LightweightCharts.CrosshairMode.Normal },
+    rightPriceScale: { borderColor: 'rgba(255,255,255,0.1)' },
+    timeScale:       { borderColor: 'rgba(255,255,255,0.1)', timeVisible: true, rightOffset: 10 },
+    handleScroll: true,
+    handleScale:  true,
+};
+
+function makeChart(id, extraOpts = {}) {
+    const el = document.getElementById(id);
+    const chart = LightweightCharts.createChart(el, { ...COMMON_OPTS, ...extraOpts });
+    return { chart, el };
+}
+
+const { chart: priceChart }  = makeChart('price-chart');
+const { chart: volumeChart } = makeChart('volume-chart', { timeScale: { visible: false } });
+const { chart: rsiChart }    = makeChart('rsi-chart',    { timeScale: { visible: false } });
+const { chart: macdChart }   = makeChart('macd-chart');
+
+// ── Series ────────────────────────────────────────────────────────────────
+const candleSeries = priceChart.addCandlestickSeries({
+    upColor: '#10b981', downColor: '#ef4444',
+    borderVisible: false,
+    wickUpColor: '#10b981', wickDownColor: '#ef4444',
+});
+
+const sma20Series  = priceChart.addLineSeries({ color: '#10b981', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+const sma50Series  = priceChart.addLineSeries({ color: '#f59e0b', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+const sma100Series = priceChart.addLineSeries({ color: '#8b5cf6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: false });
+const sma200Series = priceChart.addLineSeries({ color: '#ec4899', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: false });
+
+const bbUpperSeries = priceChart.addLineSeries({ color: 'rgba(6,182,212,0.55)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: false, lineStyle: 2 });
+const bbLowerSeries = priceChart.addLineSeries({ color: 'rgba(6,182,212,0.55)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: false, lineStyle: 2 });
+const bbMidSeries   = priceChart.addLineSeries({ color: 'rgba(6,182,212,0.25)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, visible: false });
+
+const volumeSeries = volumeChart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: '',
+    scaleMargins: { top: 0.05, bottom: 0 },
+});
+
+const rsiSeries = rsiChart.addLineSeries({ color: '#3b82f6', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true });
+// Static RSI level lines
+rsiSeries.createPriceLine({ price: 70, color: 'rgba(239,68,68,0.45)',   lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+rsiSeries.createPriceLine({ price: 30, color: 'rgba(16,185,129,0.45)',  lineWidth: 1, lineStyle: 2, axisLabelVisible: true });
+rsiSeries.createPriceLine({ price: 50, color: 'rgba(148,163,184,0.2)',  lineWidth: 1, lineStyle: 2, axisLabelVisible: false });
+
+const macdLineSeries   = macdChart.addLineSeries({ color: '#3b82f6', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+const signalLineSeries = macdChart.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false });
+const macdHistSeries   = macdChart.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false });
+
+// ── Series toggle map ─────────────────────────────────────────────────────
+const SERIES_MAP = {
+    sma20:  [sma20Series],
+    sma50:  [sma50Series],
+    sma100: [sma100Series],
+    sma200: [sma200Series],
+    bb:     [bbUpperSeries, bbLowerSeries, bbMidSeries],
+};
+
+// ── Time-scale sync ───────────────────────────────────────────────────────
+const ALL_CHARTS = [priceChart, volumeChart, rsiChart, macdChart];
+let syncing = false;
+
+ALL_CHARTS.forEach(src => {
+    src.timeScale().subscribeVisibleLogicalRangeChange(range => {
+        if (syncing || !range) return;
+        syncing = true;
+        ALL_CHARTS.forEach(c => { if (c !== src) c.timeScale().setVisibleLogicalRange(range); });
+        syncing = false;
+    });
+});
+
+// ── Responsive resize ─────────────────────────────────────────────────────
+function resize() {
+    const w = document.querySelector('.container').clientWidth;
+    ALL_CHARTS.forEach(c => c.applyOptions({ width: w }));
+}
+new ResizeObserver(resize).observe(document.querySelector('.container'));
+resize();
+
+// ── Data helpers ──────────────────────────────────────────────────────────
+function toLine(bars, values) {
+    return bars
+        .map((b, i) => (values[i] != null ? { time: b.time, value: +values[i].toFixed(2) } : null))
+        .filter(Boolean);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function render(data) {
+    const { bars, indicators: ind, meta } = data;
+
+    // Candlesticks
+    candleSeries.setData(bars);
+
+    // SMAs
+    sma20Series.setData(toLine(bars, ind.sma20));
+    sma50Series.setData(toLine(bars, ind.sma50));
+    sma100Series.setData(toLine(bars, ind.sma100));
+    sma200Series.setData(toLine(bars, ind.sma200));
+
+    // Bollinger Bands
+    bbUpperSeries.setData(bars.map((b, i) => ind.bb20[i] ? { time: b.time, value: +ind.bb20[i].upper.toFixed(2) } : null).filter(Boolean));
+    bbLowerSeries.setData(bars.map((b, i) => ind.bb20[i] ? { time: b.time, value: +ind.bb20[i].lower.toFixed(2) } : null).filter(Boolean));
+    bbMidSeries.setData(  bars.map((b, i) => ind.bb20[i] ? { time: b.time, value: +ind.bb20[i].middle.toFixed(2) } : null).filter(Boolean));
+
+    // Volume (green/red tint)
+    volumeSeries.setData(bars.map(b => ({
+        time:  b.time,
+        value: b.volume,
+        color: b.close >= b.open ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)',
+    })));
+
+    // RSI
+    rsiSeries.setData(toLine(bars, ind.rsi14));
+
+    // MACD
+    macdLineSeries.setData(
+        bars.map((b, i) => ind.macd[i]?.MACD != null ? { time: b.time, value: +ind.macd[i].MACD.toFixed(2) } : null).filter(Boolean)
+    );
+    signalLineSeries.setData(
+        bars.map((b, i) => ind.macd[i]?.signal != null ? { time: b.time, value: +ind.macd[i].signal.toFixed(2) } : null).filter(Boolean)
+    );
+    macdHistSeries.setData(
+        bars.map((b, i) => ind.macd[i]?.histogram != null ? {
+            time:  b.time,
+            value: +ind.macd[i].histogram.toFixed(2),
+            color: ind.macd[i].histogram >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)',
+        } : null).filter(Boolean)
+    );
+
+    priceChart.timeScale().fitContent();
+
+    // ── Price display ──
+    const price     = meta.regularMarketPrice;
+    const prev      = meta.previousClose;
+    const chg       = price - prev;
+    const chgPct    = chg / prev * 100;
+    const sign      = chg >= 0 ? '+' : '';
+
+    document.getElementById('price').textContent    = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('price').style.color    = chg >= 0 ? '#10b981' : '#ef4444';
+    document.getElementById('change').textContent   = `${sign}${chg.toFixed(2)} (${sign}${chgPct.toFixed(2)}%)`;
+    document.getElementById('change').className     = chg >= 0 ? 'positive' : 'negative';
+    document.getElementById('last-updated').textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
+    // ── Stats bar ──
+    const lastBar  = bars[bars.length - 1];
+    const lastRsi  = ind.rsi14.filter(Boolean).at(-1);
+    const lastMacd = ind.macd.filter(Boolean).at(-1);
+    const lastSma20  = ind.sma20.filter(Boolean).at(-1);
+    const lastSma50  = ind.sma50.filter(Boolean).at(-1);
+    const lastSma200 = ind.sma200.filter(Boolean).at(-1);
+
+    const stats = [
+        { label: 'Open',      value: lastBar.open.toFixed(2) },
+        { label: 'High',      value: lastBar.high.toFixed(2) },
+        { label: 'Low',       value: lastBar.low.toFixed(2)  },
+        { label: 'Close',     value: lastBar.close.toFixed(2) },
+        { label: '52W High',  value: meta.fiftyTwoWeekHigh?.toFixed(2) ?? '—' },
+        { label: '52W Low',   value: meta.fiftyTwoWeekLow?.toFixed(2)  ?? '—' },
+        { label: 'SMA 20',    value: lastSma20?.toFixed(2)  ?? '—', color: lastBar.close > lastSma20  ? '#10b981' : '#ef4444' },
+        { label: 'SMA 50',    value: lastSma50?.toFixed(2)  ?? '—', color: lastBar.close > lastSma50  ? '#10b981' : '#ef4444' },
+        { label: 'SMA 200',   value: lastSma200?.toFixed(2) ?? '—', color: lastBar.close > lastSma200 ? '#10b981' : '#ef4444' },
+        { label: 'RSI (14)',  value: lastRsi?.toFixed(1) ?? '—',
+          color: lastRsi > 70 ? '#ef4444' : lastRsi < 30 ? '#10b981' : '#e2e8f0' },
+        { label: 'MACD',      value: lastMacd?.MACD?.toFixed(2)   ?? '—', color: (lastMacd?.MACD  ?? 0) >= 0 ? '#10b981' : '#ef4444' },
+        { label: 'Signal',    value: lastMacd?.signal?.toFixed(2) ?? '—' },
+        { label: 'Histogram', value: lastMacd?.histogram?.toFixed(2) ?? '—', color: (lastMacd?.histogram ?? 0) >= 0 ? '#10b981' : '#ef4444' },
+    ];
+
+    document.getElementById('stats-bar').innerHTML = stats.map(s => `
+        <div class="stat-item">
+            <div class="stat-label">${s.label}</div>
+            <div class="stat-value" style="color:${s.color ?? '#e2e8f0'}">${s.value}</div>
+        </div>`).join('');
+}
+
+// ── Load data ─────────────────────────────────────────────────────────────
+const RANGE_INTERVAL = {
+    '1mo': '1d', '3mo': '1d', '6mo': '1d',
+    '1y':  '1d', '2y':  '1d', '5y': '1wk',
+};
+
+let currentRange  = '1y';
+let refreshTimer  = null;
+
+async function loadData(range) {
+    const interval = RANGE_INTERVAL[range] ?? '1d';
+    const errEl    = document.getElementById('error-msg');
+    errEl.style.display = 'none';
+    document.getElementById('loading').classList.remove('hidden');
+
+    // GitHub Pages: load pre-generated static JSON; local dev: call the API
+    const staticUrl = `data/sp500_${range}_${interval}.json`;
+    const apiUrl    = `/api/sp500?range=${range}&interval=${interval}`;
+
+    try {
+        let data;
+        const staticRes = await fetch(staticUrl);
+        if (staticRes.ok) {
+            data = await staticRes.json();
+        } else {
+            const apiRes = await fetch(apiUrl);
+            data = await apiRes.json();
+        }
+        if (data.error) throw new Error(data.error);
+        render(data);
+    } catch (err) {
+        errEl.textContent    = `⚠ ${err.message}`;
+        errEl.style.display  = 'block';
+        console.error(err);
+    } finally {
+        document.getElementById('loading').classList.add('hidden');
+    }
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.range-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentRange = btn.dataset.range;
+        loadData(currentRange);
+    });
+});
+
+document.querySelectorAll('.ind-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const isActive = btn.classList.toggle('active');
+        (SERIES_MAP[btn.dataset.series] ?? []).forEach(s => s.applyOptions({ visible: isActive }));
+    });
+});
+
+// ── Auto-refresh every 5 minutes ──────────────────────────────────────────
+function scheduleRefresh() {
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(() => loadData(currentRange), 5 * 60 * 1000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadData(currentRange);
+scheduleRefresh();
+</script>
+</body>
+</html>

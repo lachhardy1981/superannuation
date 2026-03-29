@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lach's Super</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-card: #111827;
+            --bg-card-hover: #1a2332;
+            --border: #1e293b;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f59e0b;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .header .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .header .current-balance {
+            text-align: right;
+        }
+
+        .header .current-balance .label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .header .current-balance .value {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent-green);
+            letter-spacing: -1px;
+        }
+
+        .header .current-balance .date {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Key Figures - Top Row */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: background 0.2s;
+        }
+
+        .metric-card:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .metric-card .metric-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 6px;
+        }
+
+        .metric-card .metric-value {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .metric-card .metric-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+        }
+
+        .positive { color: var(--accent-green); }
+        .negative { color: var(--accent-red); }
+        .neutral { color: var(--text-primary); }
+
+        /* Chart Container */
+        .chart-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .chart-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .chart-legend-custom {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            font-size: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            opacity: 1;
+            transition: opacity 0.2s;
+        }
+
+        .legend-item.dimmed {
+            opacity: 0.3;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-line {
+            width: 20px;
+            height: 2px;
+        }
+
+        .legend-line.dashed {
+            background: repeating-linear-gradient(90deg, currentColor 0, currentColor 4px, transparent 4px, transparent 8px);
+            height: 2px;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 500px;
+        }
+
+        /* Allocation Timeline */
+        .allocation-bar {
+            display: flex;
+            height: 32px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .allocation-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            white-space: nowrap;
+            overflow: hidden;
+            padding: 0 8px;
+        }
+
+        /* Bottom metrics */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .info-card h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-row .label {
+            color: var(--text-secondary);
+        }
+
+        .info-row .value {
+            font-weight: 600;
+        }
+
+        /* Performance bars */
+        .perf-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 0;
+        }
+
+        .perf-bar-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            width: 70px;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .perf-bar-track {
+            flex: 1;
+            height: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .perf-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding-left: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            min-width: 40px;
+            transition: width 0.8s ease;
+        }
+
+        .forecast-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .forecast-table th,
+        .forecast-table td {
+            padding: 8px 12px;
+            text-align: right;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .forecast-table th {
+            text-align: right;
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .forecast-table th:first-child,
+        .forecast-table td:first-child {
+            text-align: left;
+        }
+
+        .forecast-table td.highlight {
+            color: var(--accent-purple);
+            font-weight: 600;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .allocation-timeline {
+            margin-top: 8px;
+        }
+
+        .allocation-timeline .timeline-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; }
+            .header h1 { font-size: 22px; }
+            .header .current-balance .value { font-size: 28px; }
+            .chart-wrapper { height: 350px; }
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1>Lach's Super</h1>
+                <div class="subtitle">Aware Super FutureSaver &mdash; Performance Dashboard &amp; Forecast to Retirement</div>
+            </div>
+            <div class="current-balance">
+                <div class="label">Current Balance</div>
+                <div class="value">$483,557</div>
+                <div class="date">As at 26 March 2026 &middot; 100% Cash</div>
+            </div>
+        </div>
+
+        <!-- Top Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Growth (7yr)</div>
+                <div class="metric-value positive">+$252,705</div>
+                <div class="metric-sub">From $230,852 (Jun 2019)</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Best Year Return</div>
+                <div class="metric-value positive">+24.9%</div>
+                <div class="metric-sub">FY 2020&ndash;21</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Worst Year Return</div>
+                <div class="metric-value negative">&minus;6.0%</div>
+                <div class="metric-sub">FY 2019&ndash;20</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Aware Int'l Shares Avg</div>
+                <div class="metric-value neutral">13.27% p.a.</div>
+                <div class="metric-sub">7-year average return</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Forecast at Retirement (2046)</div>
+                <div class="metric-value" style="color: var(--accent-purple);" id="forecast-2046">—</div>
+                <div class="metric-sub">At 13.27% p.a. Int'l Shares</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Current Allocation</div>
+                <div class="metric-value" style="color: var(--accent-orange);">100% Cash</div>
+                <div class="metric-sub">Since 10 March 2026</div>
+            </div>
+        </div>
+
+        <!-- Main Chart -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="chart-title">Balance History, Market Indices &amp; Forecast</div>
+                <div class="chart-legend-custom" id="customLegend"></div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="mainChart"></canvas>
+            </div>
+            <div class="allocation-timeline">
+                <div class="timeline-label">Investment Allocation Timeline</div>
+                <div class="allocation-bar">
+                    <div class="allocation-segment" style="background: #3b82f6; width: 14%;" title="Jun 2019: AU Equities + Int'l Equities">AU+Int'l Eq</div>
+                    <div class="allocation-segment" style="background: #8b5cf6; width: 14%;" title="Jun 2020: High Growth">High Growth</div>
+                    <div class="allocation-segment" style="background: #06b6d4; width: 56%;" title="Jun 2021–2025: AU Shares 40% + Int'l Shares 60%">AU Shares 40% / Int'l Shares 60%</div>
+                    <div class="allocation-segment" style="background: #f59e0b; width: 16%;" title="Mar 2026: 100% Cash">Cash</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Annual Performance Bars -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <div class="chart-title">Annual Investment Returns</div>
+            </div>
+            <div class="chart-wrapper" style="height: 300px;">
+                <canvas id="perfChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Bottom Info Cards -->
+        <div class="bottom-grid">
+            <div class="info-card">
+                <h3>Historical Balance Summary</h3>
+                <div class="info-row"><span class="label">Jun 2019</span><span class="value">$230,851.64</span></div>
+                <div class="info-row"><span class="label">Jun 2020</span><span class="value negative">$209,288.82</span></div>
+                <div class="info-row"><span class="label">Jun 2021</span><span class="value positive">$280,363.93</span></div>
+                <div class="info-row"><span class="label">Jun 2022</span><span class="value negative">$270,488.21</span></div>
+                <div class="info-row"><span class="label">Jun 2023</span><span class="value positive">$315,487.47</span></div>
+                <div class="info-row"><span class="label">Jun 2024</span><span class="value positive">$370,482.26</span></div>
+                <div class="info-row"><span class="label">Jun 2025</span><span class="value positive">$453,257.83</span></div>
+                <div class="info-row"><span class="label">Mar 2026</span><span class="value neutral">$483,557.09</span></div>
+            </div>
+
+            <div class="info-card">
+                <h3>Forecast to Retirement 2046 (Int'l Shares @ 13.27% p.a.)</h3>
+                <table class="forecast-table">
+                    <thead>
+                        <tr><th>Date</th><th>Projected Balance</th><th>Growth</th></tr>
+                    </thead>
+                    <tbody id="forecastTable"></tbody>
+                </table>
+            </div>
+
+            <div class="info-card">
+                <h3>Aware Super Int'l Shares Returns</h3>
+                <div id="intlSharesBars"></div>
+            </div>
+
+            <div class="info-card">
+                <h3>Aware Super Investment Options (Feb 2026)</h3>
+                <div class="info-row"><span class="label">High Growth</span><span class="value">8.87% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">High Growth SC</span><span class="value">9.96% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">High Growth Indexed</span><span class="value">10.92% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">Balanced</span><span class="value">8.10% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">International Shares</span><span class="value positive">5.25% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">Australian Shares</span><span class="value positive">15.85% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+                <div class="info-row"><span class="label">Cash</span><span class="value">3.82% <span style="color:var(--text-muted);font-weight:400;font-size:11px;">1yr</span></span></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Data sourced from Aware Super annual statements (FY2019&ndash;FY2025) and FutureSaver performance data (Feb 2026).
+            S&amp;P 500 and ASX 200 values are approximate end-of-period closing prices.
+            Forecast assumes 13.27% p.a. average return (Aware Super Int'l Shares 7yr avg) with no additional contributions.
+            Past performance is not a reliable indicator of future performance.
+        </div>
+    </div>
+
+    <script>
+    // ── DATA ──────────────────────────────────────────────────────────────
+    const balanceData = [
+        { date: '2019-06-30', label: 'Jun 2019', balance: 230851.64, allocation: 'AU Equities + Int\'l Equities' },
+        { date: '2020-06-30', label: 'Jun 2020', balance: 209288.82, allocation: 'High Growth' },
+        { date: '2021-06-30', label: 'Jun 2021', balance: 280363.93, allocation: 'AU Shares 40% / Int\'l Shares 60%' },
+        { date: '2022-06-30', label: 'Jun 2022', balance: 270488.21, allocation: 'AU Shares 40% / Int\'l Shares 60%' },
+        { date: '2023-06-30', label: 'Jun 2023', balance: 315487.47, allocation: 'AU Shares 40% / Int\'l Shares 60%' },
+        { date: '2024-06-30', label: 'Jun 2024', balance: 370482.26, allocation: 'AU Shares 40% / Int\'l Shares 60%' },
+        { date: '2025-06-30', label: 'Jun 2025', balance: 453257.83, allocation: 'AU Shares 40% / Int\'l Shares 60%' },
+        { date: '2026-03-26', label: 'Mar 2026', balance: 483557.09, allocation: '100% Cash' },
+    ];
+
+    // Annual returns (FY ending June)
+    const annualReturns = [
+        { year: 'FY19', pct: 12.1 },
+        { year: 'FY20', pct: -6.0 },
+        { year: 'FY21', pct: 24.9 },
+        { year: 'FY22', pct: -5.8 },
+        { year: 'FY23', pct: 15.2 },
+        { year: 'FY24', pct: 14.4 },
+        { year: 'FY25', pct: 13.3 },
+    ];
+
+    // Aware Super International Shares yearly returns
+    const intlSharesReturns = [
+        { year: 'FY19', pct: 11.93 },
+        { year: 'FY20', pct: 5.05 },
+        { year: 'FY21', pct: 24.87 },
+        { year: 'FY22', pct: -6.53 },
+        { year: 'FY23', pct: 20.72 },
+        { year: 'FY24', pct: 19.39 },
+        { year: 'FY25', pct: 17.49 },
+    ];
+    const intlSharesAvg = 13.27;
+
+    // S&P 500 approximate end-of-period values
+    const sp500 = [
+        { date: '2019-06-30', value: 2942 },
+        { date: '2020-06-30', value: 3100 },
+        { date: '2021-06-30', value: 4298 },
+        { date: '2022-06-30', value: 3785 },
+        { date: '2023-06-30', value: 4450 },
+        { date: '2024-06-30', value: 5460 },
+        { date: '2025-06-30', value: 5950 },
+        { date: '2026-03-26', value: 5488 },
+    ];
+
+    // ASX/S&P 200 approximate end-of-period values
+    const asx200 = [
+        { date: '2019-06-30', value: 6619 },
+        { date: '2020-06-30', value: 5897 },
+        { date: '2021-06-30', value: 7313 },
+        { date: '2022-06-30', value: 6568 },
+        { date: '2023-06-30', value: 7203 },
+        { date: '2024-06-30', value: 7767 },
+        { date: '2025-06-30', value: 8300 },
+        { date: '2026-03-26', value: 8450 },
+    ];
+
+    // ── NORMALIZE INDEX DATA (base 100 at Jun 2019) ─────────────────────
+    const sp500Base = sp500[0].value;
+    const asx200Base = asx200[0].value;
+
+    const sp500Norm = sp500.map(d => (d.value / sp500Base * 100).toFixed(1));
+    const asx200Norm = asx200.map(d => (d.value / asx200Base * 100).toFixed(1));
+
+    // Aware Int'l Shares cumulative growth (indexed to 100)
+    let intlCumulative = [100];
+    for (let i = 0; i < intlSharesReturns.length; i++) {
+        intlCumulative.push((intlCumulative[i] * (1 + intlSharesReturns[i].pct / 100)).toFixed(1));
+    }
+    // intlCumulative has 8 entries: Jun 2018 baseline to Jun 2025
+    // We need Jun 2019 = after first year of returns
+    // Actually: index 0 = start (Jun 2018), index 1 = Jun 2019, ..., index 7 = Jun 2025
+    // But our chart starts at Jun 2019, so we want indices 1-7 plus Mar 2026
+    // For Mar 2026 (9 months into FY26, with FY to date of 4.02%):
+    const intlSharesFYTD = 4.02;
+    const intlMar2026 = (parseFloat(intlCumulative[7]) * (1 + intlSharesFYTD / 100)).toFixed(1);
+
+    const intlSharesNorm = intlCumulative.slice(1).concat([intlMar2026]);
+    // This gives us 8 points matching our 8 date labels
+
+    // Balance normalized to 100
+    const balBase = balanceData[0].balance;
+    const balanceNorm = balanceData.map(d => (d.balance / balBase * 100).toFixed(1));
+
+    // ── FORECAST ─────────────────────────────────────────────────────────
+    // Cash at 3.82% p.a. from 26 Mar to 30 Apr 2026 (35 days)
+    const cashRate = 3.82;
+    const daysInCash = 35;
+    const balAtSwitch = 483557.09 * (1 + cashRate / 100 * daysInCash / 365);
+
+    // Forecast: switch to Int'l Shares on 30 Apr 2026, 13.27% p.a.
+    const forecastRate = intlSharesAvg / 100;
+    const forecastPoints = [];
+    const forecastLabels = [];
+
+    // Generate forecast at June each year + Apr 2026 start + Apr 2033 end
+    // Apr 2026 (switch point)
+    forecastPoints.push(balAtSwitch);
+    forecastLabels.push('Apr 2026');
+
+    // Jun 2026 (2 months)
+    forecastPoints.push(balAtSwitch * Math.pow(1 + forecastRate, 2 / 12));
+    forecastLabels.push('Jun 2026');
+
+    for (let yr = 2027; yr <= 2046; yr++) {
+        const months = (yr - 2026) * 12 + 2; // months from Apr 2026
+        forecastPoints.push(balAtSwitch * Math.pow(1 + forecastRate, months / 12));
+        forecastLabels.push('Jun ' + yr);
+    }
+
+    // ── MAIN CHART ──────────────────────────────────────────────────────
+    const allLabels = balanceData.map(d => d.label).concat(forecastLabels.slice(1)); // skip 'Apr 2026' overlap
+
+    // Build balance line (actual + null padding for forecast)
+    const balanceLine = balanceData.map(d => d.balance);
+    const forecastPad = new Array(forecastLabels.length - 1).fill(null);
+    const balanceLineExtended = balanceLine.concat(forecastPad);
+
+    // Build forecast line (null padding for history + forecast)
+    // Connect forecast to last actual balance point
+    const histPad = new Array(balanceData.length - 1).fill(null);
+    const forecastLineAdjusted = [forecastPoints[0]].concat(forecastPoints.slice(1));
+    // We want the forecast to start from Mar 2026 balance, then Apr 2026, then Jun 2026...
+    // Actually, let's connect at Mar 2026
+    const forecastLine = histPad.concat([483557.09]).concat(forecastPoints.slice(1));
+
+    // Extend index data with nulls for forecast period
+    const sp500Extended = sp500Norm.concat(new Array(forecastLabels.length - 1).fill(null));
+    const asx200Extended = asx200Norm.concat(new Array(forecastLabels.length - 1).fill(null));
+    const intlExtended = intlSharesNorm.concat(new Array(forecastLabels.length - 1).fill(null));
+    const balNormExtended = balanceNorm.concat(new Array(forecastLabels.length - 1).fill(null));
+
+    // For forecast, extend Int'l Shares normalized line
+    const intlLastVal = parseFloat(intlSharesNorm[intlSharesNorm.length - 1]);
+    const intlForecastNorm = [intlLastVal];
+    for (let i = 1; i < forecastLabels.length; i++) {
+        const months = i === 1 ? 2 : ((i - 1) * 12 + 2);
+        // Actually just extend from Mar 2026 value
+        const monthsFromMar = i === 1 ? 3 : ((parseInt(forecastLabels[i].split(' ')[1]) - 2026) * 12 + 3);
+        intlForecastNorm.push((intlLastVal * Math.pow(1 + forecastRate, monthsFromMar / 12)).toFixed(1));
+    }
+    const intlForecastExtended = new Array(balanceData.length - 1).fill(null).concat([intlLastVal]).concat(intlForecastNorm.slice(1));
+
+    const ctx = document.getElementById('mainChart').getContext('2d');
+
+    const mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allLabels,
+            datasets: [
+                {
+                    label: 'Super Balance (AUD)',
+                    data: balanceLineExtended,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: '#3b82f6',
+                    yAxisID: 'y',
+                    order: 1,
+                },
+                {
+                    label: 'Forecast (Int\'l Shares)',
+                    data: forecastLine,
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.08)',
+                    borderWidth: 3,
+                    borderDash: [8, 4],
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#8b5cf6',
+                    yAxisID: 'y',
+                    order: 2,
+                },
+                {
+                    label: 'S&P 500 (indexed)',
+                    data: sp500Extended.map(v => v ? parseFloat(v) : null),
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#10b981',
+                    yAxisID: 'y1',
+                    order: 3,
+                },
+                {
+                    label: 'ASX 200 (indexed)',
+                    data: asx200Extended.map(v => v ? parseFloat(v) : null),
+                    borderColor: '#f59e0b',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b',
+                    yAxisID: 'y1',
+                    order: 4,
+                },
+                {
+                    label: 'Aware Int\'l Shares (indexed)',
+                    data: intlExtended.map(v => v ? parseFloat(v) : null),
+                    borderColor: '#ec4899',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#ec4899',
+                    yAxisID: 'y1',
+                    order: 5,
+                },
+                {
+                    label: 'Int\'l Shares Forecast (indexed)',
+                    data: intlForecastExtended.map(v => v ? parseFloat(v) : null),
+                    borderColor: '#ec4899',
+                    borderWidth: 2,
+                    borderDash: [6, 3],
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                    pointBackgroundColor: '#ec4899',
+                    yAxisID: 'y1',
+                    order: 6,
+                },
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: false,
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#94a3b8',
+                    borderColor: '#1e293b',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = context.parsed.y;
+                            if (value === null) return null;
+                            if (label.includes('AUD') || label.includes('Forecast (')) {
+                                return label + ': $' + Math.round(value).toLocaleString();
+                            }
+                            return label + ': ' + value.toFixed(1);
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        switchLine: {
+                            type: 'line',
+                            xMin: 'Mar 2026',
+                            xMax: 'Mar 2026',
+                            borderColor: 'rgba(245, 158, 11, 0.5)',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: 'Switch to Cash',
+                                position: 'start',
+                                backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                                color: '#fff',
+                                font: { size: 10 },
+                                padding: 4,
+                            }
+                        },
+                        forecastStart: {
+                            type: 'line',
+                            xMin: 'Apr 2026',
+                            xMax: 'Apr 2026',
+                            borderColor: 'rgba(139, 92, 246, 0.5)',
+                            borderWidth: 2,
+                            borderDash: [4, 4],
+                            label: {
+                                display: true,
+                                content: 'Switch to Int\'l Shares',
+                                position: 'start',
+                                backgroundColor: 'rgba(139, 92, 246, 0.8)',
+                                color: '#fff',
+                                font: { size: 10 },
+                                padding: 4,
+                            }
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#64748b', font: { size: 11 } },
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Balance (AUD)',
+                        color: '#64748b',
+                    },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#3b82f6',
+                        font: { size: 11 },
+                        callback: v => '$' + (v / 1000).toFixed(0) + 'k'
+                    },
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Index (base 100 = Jun 2019)',
+                        color: '#64748b',
+                    },
+                    grid: { drawOnChartArea: false },
+                    ticks: {
+                        color: '#10b981',
+                        font: { size: 11 },
+                    },
+                },
+            },
+        },
+    });
+
+    // ── CUSTOM LEGEND ───────────────────────────────────────────────────
+    const legendContainer = document.getElementById('customLegend');
+    const legendItems = [
+        { label: 'Super Balance', color: '#3b82f6', idx: 0 },
+        { label: 'Forecast', color: '#8b5cf6', idx: 1, dashed: true },
+        { label: 'S&P 500', color: '#10b981', idx: 2 },
+        { label: 'ASX 200', color: '#f59e0b', idx: 3 },
+        { label: 'Aware Int\'l Shares', color: '#ec4899', idx: 4 },
+    ];
+    legendItems.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'legend-item';
+        const dot = document.createElement('div');
+        if (item.dashed) {
+            dot.className = 'legend-line dashed';
+            dot.style.color = item.color;
+        } else {
+            dot.className = 'legend-dot';
+            dot.style.backgroundColor = item.color;
+        }
+        const txt = document.createElement('span');
+        txt.style.color = '#94a3b8';
+        txt.textContent = item.label;
+        el.appendChild(dot);
+        el.appendChild(txt);
+        el.addEventListener('click', () => {
+            const indices = item.idx === 4 ? [4, 5] : [item.idx];
+            indices.forEach(i => {
+                const meta = mainChart.getDatasetMeta(i);
+                meta.hidden = !meta.hidden;
+            });
+            el.classList.toggle('dimmed');
+            mainChart.update();
+        });
+        legendContainer.appendChild(el);
+    });
+
+    // ── ANNUAL PERFORMANCE BAR CHART ────────────────────────────────────
+    const perfCtx = document.getElementById('perfChart').getContext('2d');
+    new Chart(perfCtx, {
+        type: 'bar',
+        data: {
+            labels: annualReturns.map(r => r.year),
+            datasets: [
+                {
+                    label: 'Portfolio Return',
+                    data: annualReturns.map(r => r.pct),
+                    backgroundColor: annualReturns.map(r => r.pct >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                    borderColor: annualReturns.map(r => r.pct >= 0 ? '#10b981' : '#ef4444'),
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.5,
+                },
+                {
+                    label: 'Aware Int\'l Shares',
+                    data: intlSharesReturns.map(r => r.pct),
+                    backgroundColor: 'rgba(236, 72, 153, 0.5)',
+                    borderColor: '#ec4899',
+                    borderWidth: 1,
+                    borderRadius: 4,
+                    barPercentage: 0.5,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    labels: { color: '#94a3b8', font: { size: 11 } },
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 24, 39, 0.95)',
+                    titleColor: '#e2e8f0',
+                    bodyColor: '#94a3b8',
+                    callbacks: {
+                        label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { color: '#64748b' },
+                },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: {
+                        color: '#64748b',
+                        callback: v => v + '%'
+                    },
+                },
+            },
+        },
+    });
+
+    // ── FORECAST TABLE ──────────────────────────────────────────────────
+    const forecastTableBody = document.getElementById('forecastTable');
+    forecastLabels.forEach((label, i) => {
+        const bal = forecastPoints[i];
+        const growth = bal - 483557.09;
+        const growthPct = (growth / 483557.09 * 100).toFixed(1);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${label}</td>
+            <td class="highlight">$${Math.round(bal).toLocaleString()}</td>
+            <td class="${growth >= 0 ? 'positive' : 'negative'}">+$${Math.round(growth).toLocaleString()} (${growthPct}%)</td>
+        `;
+        forecastTableBody.appendChild(tr);
+    });
+
+    // Update the header forecast value (retirement 2046)
+    document.getElementById('forecast-2046').textContent = '$' + Math.round(forecastPoints[forecastPoints.length - 1]).toLocaleString();
+
+    // ── INT'L SHARES PERFORMANCE BARS ───────────────────────────────────
+    const barsContainer = document.getElementById('intlSharesBars');
+    const maxPct = Math.max(...intlSharesReturns.map(r => Math.abs(r.pct)));
+    intlSharesReturns.forEach(r => {
+        const container = document.createElement('div');
+        container.className = 'perf-bar-container';
+
+        const label = document.createElement('div');
+        label.className = 'perf-bar-label';
+        label.textContent = r.year;
+
+        const track = document.createElement('div');
+        track.className = 'perf-bar-track';
+
+        const fill = document.createElement('div');
+        fill.className = 'perf-bar-fill';
+        const width = Math.abs(r.pct) / maxPct * 85 + 15;
+        fill.style.width = width + '%';
+        fill.style.backgroundColor = r.pct >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)';
+        fill.textContent = (r.pct >= 0 ? '+' : '') + r.pct.toFixed(2) + '%';
+
+        track.appendChild(fill);
+        container.appendChild(label);
+        container.appendChild(track);
+        barsContainer.appendChild(container);
+    });
+
+    // Average bar
+    const avgContainer = document.createElement('div');
+    avgContainer.className = 'perf-bar-container';
+    avgContainer.style.marginTop = '8px';
+    avgContainer.style.borderTop = '1px solid #1e293b';
+    avgContainer.style.paddingTop = '8px';
+    const avgLabel = document.createElement('div');
+    avgLabel.className = 'perf-bar-label';
+    avgLabel.textContent = 'Average';
+    avgLabel.style.fontWeight = '600';
+    const avgTrack = document.createElement('div');
+    avgTrack.className = 'perf-bar-track';
+    const avgFill = document.createElement('div');
+    avgFill.className = 'perf-bar-fill';
+    avgFill.style.width = (intlSharesAvg / maxPct * 85 + 15) + '%';
+    avgFill.style.backgroundColor = 'rgba(139, 92, 246, 0.7)';
+    avgFill.textContent = '+' + intlSharesAvg + '% p.a.';
+    avgTrack.appendChild(avgFill);
+    avgContainer.appendChild(avgLabel);
+    avgContainer.appendChild(avgTrack);
+    barsContainer.appendChild(avgContainer);
+    </script>
+</body>
+</html>

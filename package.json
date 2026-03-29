@@ -1,0 +1,15 @@
+{
+  "name": "super-dashboard",
+  "version": "1.0.0",
+  "description": "Lach's Super Dashboard — S&P 500 Technical Analysis",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "technicalindicators": "^3.1.0"
+  }
+}

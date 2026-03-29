@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sp500-dashboard",
+      "runtimeExecutable": "/Users/lachlanhardy/.nvm/versions/node/v24.14.1/bin/node",
+      "runtimeArgs": ["server.js"],
+      "port": 3000
+    },
+    {
+      "name": "static-server",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /tmp && python3 -c \"import http.server,socketserver; socketserver.TCPServer(('',8080),http.server.SimpleHTTPRequestHandler).serve_forever()\""],
+      "port": 8080
+    }
+  ]
+}

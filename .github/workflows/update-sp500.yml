@@ -1,0 +1,41 @@
+name: Update S&P 500 Data
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # every 30 minutes
+  workflow_dispatch:           # allow manual trigger from GitHub UI
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install yfinance pandas numpy
+
+      - name: Fetch S&P 500 data (all ranges)
+        run: |
+          mkdir -p data
+          python3 fetch_sp500.py 1mo 1d  > data/sp500_1mo_1d.json
+          python3 fetch_sp500.py 3mo 1d  > data/sp500_3mo_1d.json
+          python3 fetch_sp500.py 6mo 1d  > data/sp500_6mo_1d.json
+          python3 fetch_sp500.py 1y  1d  > data/sp500_1y_1d.json
+          python3 fetch_sp500.py 2y  1d  > data/sp500_2y_1d.json
+          python3 fetch_sp500.py 5y  1wk > data/sp500_5y_1wk.json
+
+      - name: Commit updated data
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git diff --staged --quiet || git commit -m "chore: update S&P 500 data [skip ci]"
+          git push
