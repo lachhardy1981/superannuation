@@ -106,4 +106,9 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    import traceback
+    try:
+        main()
+    except Exception as e:
+        traceback.print_exc()
+        sys.exit(1)

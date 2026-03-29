@@ -36,8 +36,7 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          python3 fetch_claude_analysis.py > data/claude_sma_analysis.json
-          echo "Claude analysis generated successfully"
+          python3 -u fetch_claude_analysis.py > data/claude_sma_analysis.json
 
       - name: Commit updated data
         run: |
