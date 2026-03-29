@@ -35,7 +35,9 @@ jobs:
       - name: Generate Claude SMA analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 fetch_claude_analysis.py > data/claude_sma_analysis.json && echo "Claude analysis generated successfully" || { echo "ERROR: Claude analysis failed"; cat data/claude_sma_analysis.json; exit 1; }
+        run: |
+          python3 fetch_claude_analysis.py > data/claude_sma_analysis.json
+          echo "Claude analysis generated successfully"
 
       - name: Commit updated data
         run: |
